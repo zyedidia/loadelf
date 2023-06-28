@@ -1,0 +1,17 @@
+cc = "gcc"
+local arch = cli.arch or "arm64"
+if arch == "arm64" then
+    cc = "aarch64-linux-gnu-gcc-12"
+end
+local trampoline := $arch/trampoline
+
+return b{
+    $ loader: loader.o $trampoline.o
+        $cc $input -o $output -static
+    $ loader.o: loader.c
+        $cc $input -c -o $output -O2
+    $ $trampoline.o: $trampoline.s
+        $cc $input -c -o $output
+
+    include("test/build.knit"),
+}

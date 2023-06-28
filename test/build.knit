@@ -1,0 +1,4 @@
+return b{
+    $ a.out: test.c
+        $cc $input -o $output -static-pie
+}
