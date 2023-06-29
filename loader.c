@@ -74,7 +74,6 @@ static unsigned long loadelf_anon(int fd, Elf64_Ehdr *ehdr, Elf64_Phdr *phdr)
 			goto err;
 		if (lseek(fd, iter->p_offset, SEEK_SET) < 0)
 			goto err;
-        printf("%p\n", p + off);
 		if (read(fd, p + off, iter->p_filesz) !=
 				(ssize_t)iter->p_filesz)
 			goto err;
