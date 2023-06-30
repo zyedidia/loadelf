@@ -9,6 +9,8 @@ return b{
         $cc $input -c -o $output -O2
     $ $trampoline.o: $trampoline.s
         $cc $input -c -o $output
+    $ format:VB:
+        clang-format -i loader.c
 
     include("test/build.knit"),
 }
