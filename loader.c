@@ -54,12 +54,10 @@ static unsigned long loadelf_anon(int fd, Elf64_Ehdr* ehdr, Elf64_Phdr* phdr) {
     flags |= (MAP_PRIVATE | MAP_ANONYMOUS);
 
     // Check that we can hold the whole image.
-    base = mmap(hint, maxva - minva, PROT_NONE, flags, -1, 0);
+    base = mmap(hint, maxva - minva, PROT_WRITE, flags, -1, 0);
     if (base == (void*) -1)
         return -1;
-    munmap(base, maxva - minva);
 
-    flags = MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE;
     // Now map each segment separately in precalculated address.
     for (iter = phdr; iter < &phdr[ehdr->e_phnum]; iter++) {
         unsigned long off, start;
@@ -70,9 +68,7 @@ static unsigned long loadelf_anon(int fd, Elf64_Ehdr* ehdr, Elf64_Phdr* phdr) {
         start += TRUNC_PG(iter->p_vaddr);
         sz = ROUND_PG(iter->p_memsz + off);
 
-        p = mmap((void*) start, sz, PROT_WRITE, flags, -1, 0);
-        if (p == (void*) -1)
-            goto err;
+        p = (void*) start;
         if (lseek(fd, iter->p_offset, SEEK_SET) < 0)
             goto err;
         if (read(fd, p + off, iter->p_filesz) != (ssize_t) iter->p_filesz)
