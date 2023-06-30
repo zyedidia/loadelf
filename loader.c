@@ -92,7 +92,12 @@ static void fini(void) {
 }
 
 int main(int host_argc, char* host_argv[], char* host_envp[]) {
-    char* file = "test/a.out";
+    if (host_argc <= 1) {
+        printf("no input\n");
+        return 0;
+    }
+
+    char* file = host_argv[1];
     int fd;
     if ((fd = open(file, O_RDONLY)) < 0) {
         printf("could not open file\n");
@@ -130,17 +135,20 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
     close(fd);
 
     void *sp_base = calloc(1, 1 << 21);
-    unsigned long *sp = sp_base + (1 << 21) - 128;
+    unsigned long *sp = sp_base + (1 << 21) - 4096;
 
-    (*sp)++;
+    (*sp) = host_argc - 1;
     int argc = (int)*(sp);
 	char **argv = (char **)(sp + 1);
-    argv[0] = "a.out";
+    for (int i = 0; i < host_argc - 1; i++) {
+        argv[i] = host_argv[i + 1];
+    }
     char **env, **p;
 	env = p = (char **)&argv[argc + 1];
 	while (*p++ != NULL)
-		;
-    while (*host_envp++ != NULL);
+        ;
+    while (*host_envp++ != NULL)
+        ;
     Elf64_auxv_t *av = (void *)p;
     Elf64_auxv_t *host_av = (void *)host_envp;
 
