@@ -90,6 +90,36 @@ err:
 }
 
 void trampoline(void*, void*, void*);
+void setup(uint64_t, void*);
+void syscall_entry();
+
+struct regs {
+    uint64_t x0;
+    uint64_t x1;
+    uint64_t x2;
+    uint64_t x3;
+    uint64_t x4;
+    uint64_t x5;
+    uint64_t x6;
+    uint64_t x7;
+    uint64_t x8;
+    uint64_t x9;
+    uint64_t x10;
+    uint64_t x11;
+    uint64_t x12;
+    uint64_t x13;
+    uint64_t x14;
+    uint64_t x15;
+    uint64_t x16;
+    uint64_t x17;
+    uint64_t x18;
+    uint64_t x29;
+    uint64_t x30;
+};
+
+void syscall_handler(struct regs* regs) {
+    printf("SYSCALL: %ld\n", regs->x7);
+}
 
 static void fini(void) {}
 
@@ -176,6 +206,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 #undef AVSET
     ++av;
 
+    setup(BASE_VA & 0xffffffff00000000, (void*) &syscall_entry);
     trampoline((void*) entry, sp, fini);
 
     return 0;

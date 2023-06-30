@@ -1,13 +1,12 @@
 cc = cli.cc or "gcc"
-local arch = cli.arch or "amd64"
-local trampoline := $arch/trampoline
+local arch = cli.arch or "arm64"
 
 return b{
-    $ loader: loader.o $trampoline.o
+    $ loader: loader.o $arch/trampoline.o $arch/setup.o $arch/syscall.o
         $cc $input -o $output
-    $ loader.o: loader.c
+    $ %.o: %.c
         $cc $input -c -o $output -O2
-    $ $trampoline.o: $trampoline.s
+    $ $arch/%.o: $arch/%.s
         $cc $input -c -o $output
     $ format:VB:
         clang-format -i loader.c
