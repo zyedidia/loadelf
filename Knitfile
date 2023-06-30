@@ -1,5 +1,5 @@
 cc = cli.cc or "gcc"
-local arch = cli.arch or "arm64"
+local arch = cli.arch or "amd64"
 local trampoline := $arch/trampoline
 
 return b{

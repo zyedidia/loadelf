@@ -6,6 +6,13 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#define BOX_SIZE (1ULL << 32)
+#define BOX_ALIGN (BOX_SIZE - 1)
+#define BOX_ROUND(x) (((x) + (BOX_ALIGN)) & ~(BOX_ALIGN))
+#define BOX_TRUNC(x) ((x) & ~(BOX_ALIGN))
+
+#define BASE_VA (BOX_SIZE * 2)
+
 #define PAGE_SIZE 4096
 #define ALIGN (PAGE_SIZE - 1)
 #define ROUND_PG(x) (((x) + (ALIGN)) & ~(ALIGN))
@@ -45,13 +52,13 @@ static unsigned long loadelf_anon(int fd, Elf64_Ehdr* ehdr, Elf64_Phdr* phdr) {
             maxva = iter->p_vaddr + iter->p_memsz;
     }
 
-    minva = TRUNC_PG(minva);
-    maxva = ROUND_PG(maxva);
+    minva = BOX_TRUNC(minva);
+    maxva = BOX_ROUND(maxva);
 
     // For dynamic ELF let the kernel chose the address.
-    hint = dyn ? NULL : (void*) minva;
+    hint = dyn ? (void*) BASE_VA : (void*) minva;
     flags = dyn ? 0 : MAP_FIXED;
-    flags |= (MAP_PRIVATE | MAP_ANONYMOUS);
+    flags |= (MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED);
 
     // Check that we can hold the whole image.
     base = mmap(hint, maxva - minva, PROT_WRITE, flags, -1, 0);
