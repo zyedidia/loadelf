@@ -1,11 +1,12 @@
 cc = cli.cc or "gcc"
 local arch = cli.arch or "arm64"
+local cflags = "-ffixed-x20 -ffixed-x21 -ffixed-x22"
 
 return b{
     $ loader: loader.o $arch/trampoline.o $arch/setup.o $arch/syscall.o
-        $cc $input -o $output
+        $cc $input -o $output -static
     $ %.o: %.c
-        $cc $input -c -o $output -O2
+        $cc $cflags $input -c -o $output -O2
     $ $arch/%.o: $arch/%.s
         $cc $input -c -o $output
     $ format:VB:

@@ -1,4 +1,5 @@
 return b{
     $ a.out: test.c
-        $cc $input -o $output -static-pie
+        ISOCC=musl-gcc isocc -O2 $input -o $output -static-pie
+        # gcc -O2 $input -o $output -static-pie -g3
 }

@@ -38,3 +38,5 @@ syscall_entry:
 	bl syscall_handler
 	EPILOGUE
 	add sp, sp, #176
+    svc #0
+    ret

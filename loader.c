@@ -61,7 +61,7 @@ static unsigned long loadelf_anon(int fd, Elf64_Ehdr* ehdr, Elf64_Phdr* phdr) {
     flags |= (MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED);
 
     // Check that we can hold the whole image.
-    base = mmap(hint, maxva - minva, PROT_WRITE, flags, -1, 0);
+    base = mmap(hint, maxva - minva, PROT_READ | PROT_WRITE | PROT_EXEC, flags, -1, 0);
     if (base == (void*) -1)
         return -1;
 
@@ -80,7 +80,7 @@ static unsigned long loadelf_anon(int fd, Elf64_Ehdr* ehdr, Elf64_Phdr* phdr) {
             goto err;
         if (read(fd, p + off, iter->p_filesz) != (ssize_t) iter->p_filesz)
             goto err;
-        mprotect(p, sz, PFLAGS(iter->p_flags));
+        /* mprotect(p, sz, PFLAGS(iter->p_flags)); */
     }
 
     return (unsigned long) base;
@@ -118,7 +118,6 @@ struct regs {
 };
 
 void syscall_handler(struct regs* regs) {
-    printf("SYSCALL: %ld\n", regs->x7);
 }
 
 static void fini(void) {}
@@ -166,8 +165,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 
     close(fd);
 
-    void* sp_base = calloc(1, 1 << 21);
-    unsigned long* sp = sp_base + (1 << 21) - 4096;
+    unsigned long* sp = (void*) (base + BOX_SIZE - 4096);
 
     (*sp) = host_argc - 1;
     int argc = (int) *(sp);
