@@ -118,6 +118,10 @@ struct regs {
 };
 
 void syscall_handler(struct regs* regs) {
+    switch (regs->x8) {
+    case 222: // mmap
+        return;
+    }
 }
 
 static void fini(void) {}
@@ -165,14 +169,24 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 
     close(fd);
 
-    unsigned long* sp = (void*) (base + BOX_SIZE - 4096);
+    char* args[host_argc - 1];
+
+    char* sp_args = (char*) (base + BOX_SIZE - 4096);
+    for (int i = 0; i < host_argc - 1; i++) {
+        size_t len = strnlen(host_argv[i + 1], 1024) + 1;
+        memcpy(sp_args, host_argv[i + 1], len);
+        args[i] = sp_args;
+        sp_args += len;
+    }
+    unsigned long* sp = (unsigned long*) (base + BOX_SIZE - 4096 * 2);
 
     (*sp) = host_argc - 1;
     int argc = (int) *(sp);
     char** argv = (char**) (sp + 1);
     for (int i = 0; i < host_argc - 1; i++) {
-        argv[i] = host_argv[i + 1];
+        argv[i] = args[i];
     }
+    argv[argc] = NULL;
     char **env, **p;
     env = p = (char**) &argv[argc + 1];
     while (*p++ != NULL)
