@@ -36,7 +36,12 @@ syscall_entry:
 	PROLOGUE
     mov x0, sp
 	bl syscall_handler
+    cbnz x0, handled
 	EPILOGUE
 	add sp, sp, #176
     svc #0
+    ret
+handled:
+    EPILOGUE
+    add sp, sp, #176
     ret
