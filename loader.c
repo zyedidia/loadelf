@@ -140,22 +140,22 @@ int syscall_handler(struct regs* regs) {
         return 1;
     case 222: // mmap
         if (regs->x0 == 0) {
-            regs->x0 = (uint64_t) mmap((void*) pstate.next_mmap, regs->x1, regs->x2, regs->x3, regs->x4, regs->x5);
-            printf("mmap(%lx, %ld, %ld, %ld, %ld, %ld) = %lx\n", pstate.next_mmap, regs->x1, regs->x2, regs->x3, regs->x4, regs->x5, regs->x0);
+            regs->x0 = (uint64_t) mmap((void*) pstate.next_mmap, regs->x1, regs->x2, regs->x3 | MAP_FIXED, regs->x4, regs->x5);
+            /* printf("mmap(%lx, %ld, %ld, %ld, %ld, %ld) = %lx\n", pstate.next_mmap, regs->x1, regs->x2, regs->x3, regs->x4, regs->x5, regs->x0); */
             pstate.next_mmap = ROUND_PG(pstate.next_mmap + regs->x1);
             return 1;
         } else {
             return 0;
         }
     case 214: // brk
-        printf("called brk: %lx\n", regs->x0);
+        /* printf("called brk: %lx\n", regs->x0); */
         if (regs->x0 != 0) {
             assert(mmap((void*) pstate.brk, regs->x0 - pstate.brk, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0) != (void*) -1);
             pstate.brk = regs->x0;
         }
         regs->x0 = pstate.brk;
-        printf("return: %lx\n", regs->x0);
-        pstate.next_mmap = ROUND_PG(pstate.brk);
+        /* printf("return: %lx\n", regs->x0); */
+        /* pstate.next_mmap = ROUND_PG(pstate.brk); */
         return 1;
     }
     return 0;
@@ -282,6 +282,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 
     pstate = (struct proc_state){
         .brk = ROUND_PG(brk),
+        .next_mmap = (BASE_VA + (1 * 1024 * 1024 * 1024)),
     };
 
     setup(BASE_VA & 0xffffffff00000000, (void*) &syscall_entry);
