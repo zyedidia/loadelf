@@ -25,6 +25,11 @@
 
 #define STACK_SIZE (1 << 21)
 
+#define BUDDY_ALLOC_ALIGN (PAGE_SIZE)
+#define BUDDY_ALLOC_IMPLEMENTATION
+#include "buddy_alloc.h"
+#undef BUDDY_ALLOC_IMPLEMENTATION
+
 static int check_ehdr(Elf64_Ehdr* ehdr) {
     unsigned char* e_ident = ehdr->e_ident;
     return (e_ident[EI_MAG0] != ELFMAG0 || e_ident[EI_MAG1] != ELFMAG1 ||
@@ -129,6 +134,7 @@ struct regs {
 struct proc_state {
     uintptr_t brk;
     uintptr_t next_mmap;
+    struct buddy* buddy;
 };
 
 struct proc_state pstate;
@@ -136,15 +142,16 @@ struct proc_state pstate;
 int syscall_handler(struct regs* regs) {
     switch (regs->x8) {
     case 215: // munmap
+        buddy_free(pstate.buddy, (void*) regs->x0);
         return 1;
     case 216: // mremap
         regs->x0 = (uint64_t) -1;
         return 1;
     case 222: // mmap
         if (regs->x0 == 0) {
-            regs->x0 = (uint64_t) mmap((void*) pstate.next_mmap, regs->x1, regs->x2, regs->x3 | MAP_FIXED, regs->x4, regs->x5);
-            /* printf("mmap(%lx, %ld, %ld, %ld, %ld, %ld) = %lx\n", pstate.next_mmap, regs->x1, regs->x2, regs->x3, regs->x4, regs->x5, regs->x0); */
-            pstate.next_mmap = ROUND_PG(pstate.next_mmap + regs->x1);
+            void* p = buddy_malloc(pstate.buddy, regs->x1);
+            assert(p);
+            regs->x0 = (uint64_t) p;
             return 1;
         } else {
             return 0;
@@ -282,9 +289,16 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 #undef AVSET
     ++av;
 
+    size_t heap_size = (3UL * 1024 * 1024 * 1024);
+    void* heap_meta = malloc(buddy_sizeof(heap_size));
+    assert(heap_meta);
+    uintptr_t heap = (uintptr_t) malloc(heap_size);
+    assert(heap);
+    heap = ROUND_PG(heap);
     pstate = (struct proc_state){
         .brk = ROUND_PG(brk),
         .next_mmap = (BASE_VA + (1 * 1024 * 1024 * 1024)),
+        .buddy = buddy_init(heap_meta, (void*) heap, heap_size),
     };
 
     setup(BASE_VA & 0xffffffff00000000, (void*) &syscall_entry);
