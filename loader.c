@@ -135,6 +135,8 @@ struct proc_state pstate;
 
 int syscall_handler(struct regs* regs) {
     switch (regs->x8) {
+    case 215: // munmap
+        return 1;
     case 216: // mremap
         regs->x0 = (uint64_t) -1;
         return 1;

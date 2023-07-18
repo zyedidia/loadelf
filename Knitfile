@@ -1,6 +1,6 @@
 cc = cli.cc or "gcc"
 local arch = cli.arch or "arm64"
-local cflags = "-ffixed-x20 -ffixed-x21 -ffixed-x22"
+local cflags = "-ffixed-x15 -ffixed-x21 -ffixed-x22 -ffixed-x14 -ffixed-x24 -ffixed-x23"
 
 return b{
     $ loader: loader.o $arch/trampoline.o $arch/setup.o $arch/syscall.o
