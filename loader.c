@@ -142,7 +142,9 @@ struct proc_state pstate;
 int syscall_handler(struct regs* regs) {
     switch (regs->x8) {
     case 215: // munmap
+        printf("mmap freed %lx %ld\n", regs->x0, regs->x1);
         buddy_free(pstate.buddy, (void*) regs->x0);
+        regs->x0 = 0;
         return 1;
     case 216: // mremap
         regs->x0 = (uint64_t) -1;
@@ -150,6 +152,7 @@ int syscall_handler(struct regs* regs) {
     case 222: // mmap
         if (regs->x0 == 0) {
             void* p = buddy_malloc(pstate.buddy, regs->x1);
+            printf("mmap allocated %p %ld\n", p, regs->x1);
             assert(p);
             regs->x0 = (uint64_t) p;
             return 1;
@@ -290,7 +293,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
     ++av;
 
     uintptr_t next_mmap = (BASE_VA + (1UL * 1024 * 1024 * 1024));
-    size_t heap_size = (3UL * 1024 * 1024 * 1024);
+    size_t heap_size = (2UL * 1024 * 1024 * 1024);
     void* heap_meta = malloc(buddy_sizeof(heap_size));
     assert(heap_meta);
     uintptr_t heap = (uintptr_t) mmap((void*) next_mmap, heap_size, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
