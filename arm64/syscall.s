@@ -6,9 +6,11 @@ stp x6, x7,   [sp, #0+16*3]
 stp x8, x9,   [sp, #0+16*4]
 stp x10, x11, [sp, #0+16*5]
 stp x12, x13, [sp, #0+16*6]
+stp x14, x15, [sp, #0+16*7]
 stp x16, x17, [sp, #0+16*8]
 stp x18, x29, [sp, #0+16*9]
-str x30,      [sp, #0+16*10]
+stp x21, x22, [sp, #0+16*10]
+stp x30, x24, [sp, #0+16*11]
 .endm
 
 .macro EPILOGUE
@@ -19,9 +21,11 @@ ldp x6, x7,   [sp, #0+16*3]
 ldp x8, x9,   [sp, #0+16*4]
 ldp x10, x11, [sp, #0+16*5]
 ldp x12, x13, [sp, #0+16*6]
+ldp x14, x15, [sp, #0+16*7]
 ldp x16, x17, [sp, #0+16*8]
 ldp x18, x29, [sp, #0+16*9]
-ldr x30,      [sp, #0+16*10]
+ldp x21, x22, [sp, #0+16*10]
+ldp x30, x24, [sp, #0+16*11]
 .endm
 
 .text

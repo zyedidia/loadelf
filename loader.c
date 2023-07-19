@@ -128,7 +128,10 @@ struct regs {
     uint64_t x17;
     uint64_t x18;
     uint64_t x29;
+    uint64_t x21;
+    uint64_t x22;
     uint64_t x30;
+    uint64_t x24;
 };
 
 struct proc_state {
@@ -142,8 +145,9 @@ struct proc_state pstate;
 int syscall_handler(struct regs* regs) {
     switch (regs->x8) {
     case 215: // munmap
-        printf("mmap freed %lx %ld\n", regs->x0, regs->x1);
+        memset((void*) regs->x0, 0, regs->x1);
         buddy_free(pstate.buddy, (void*) regs->x0);
+        printf("munmap %lx\n", regs->x0);
         regs->x0 = 0;
         return 1;
     case 216: // mremap
@@ -151,8 +155,9 @@ int syscall_handler(struct regs* regs) {
         return 1;
     case 222: // mmap
         if (regs->x0 == 0) {
-            void* p = buddy_malloc(pstate.buddy, regs->x1);
-            printf("mmap allocated %p %ld\n", p, regs->x1);
+            size_t size = ROUND_PG(regs->x1);
+            void* p = buddy_malloc(pstate.buddy, size);
+            printf("mmap %p %ld\n", p, regs->x1);
             assert(p);
             regs->x0 = (uint64_t) p;
             return 1;
