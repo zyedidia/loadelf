@@ -147,7 +147,7 @@ int syscall_handler(struct regs* regs) {
     case 215: // munmap
         memset((void*) regs->x0, 0, regs->x1);
         buddy_free(pstate.buddy, (void*) regs->x0);
-        printf("munmap %lx\n", regs->x0);
+        /* printf("munmap %lx\n", regs->x0); */
         regs->x0 = 0;
         return 1;
     case 216: // mremap
@@ -157,7 +157,7 @@ int syscall_handler(struct regs* regs) {
         if (regs->x0 == 0) {
             size_t size = ROUND_PG(regs->x1);
             void* p = buddy_malloc(pstate.buddy, size);
-            printf("mmap %p %ld\n", p, regs->x1);
+            /* printf("mmap %p %ld\n", p, regs->x1); */
             assert(p);
             regs->x0 = (uint64_t) p;
             return 1;
@@ -297,8 +297,8 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 #undef AVSET
     ++av;
 
-    uintptr_t next_mmap = (BASE_VA + (1UL * 1024 * 1024 * 1024));
-    size_t heap_size = (2UL * 1024 * 1024 * 1024);
+    uintptr_t next_mmap = (BASE_VA + (2UL * 1024 * 1024 * 1024));
+    size_t heap_size = (1UL * 1024 * 1024 * 1024);
     void* heap_meta = malloc(buddy_sizeof(heap_size));
     assert(heap_meta);
     uintptr_t heap = (uintptr_t) mmap((void*) next_mmap, heap_size, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);

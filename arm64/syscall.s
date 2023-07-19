@@ -34,16 +34,16 @@ ldp x30, x24, [sp, #0+16*11]
 .type syscall_entry,@function
 syscall_entry:
 	// TODO: optimize by only saving/restoring for hooked syscalls (mmap, brk)
-	sub sp, sp, #176
+	sub sp, sp, #192
 	PROLOGUE
     mov x0, sp
 	bl syscall_handler
     cbnz x0, handled
 	EPILOGUE
-	add sp, sp, #176
+	add sp, sp, #192
     svc #0
     ret
 handled:
     EPILOGUE
-    add sp, sp, #176
+    add sp, sp, #192
     ret
