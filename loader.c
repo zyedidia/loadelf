@@ -311,8 +311,9 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
     };
 
     void* sysbase = (void*) (BASE_VA & 0xffffffff00000000);
-    mmap(sysbase, PAGE_SIZE, PROT_READ, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    mmap(sysbase, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     *((void**)sysbase) = (void*) &syscall_entry;
+    mprotect(sysbase, PAGE_SIZE, PROT_READ);
     setup((uint64_t) sysbase);
     trampoline((void*) entry, sp, fini);
 
