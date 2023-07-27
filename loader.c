@@ -310,8 +310,9 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
         .buddy = buddy_init(heap_meta, (void*) heap, heap_size),
     };
 
-    void** sysbase = (void**) (BASE_VA & 0xffffffff00000000);
-    *sysbase = (void*) &syscall_entry;
+    void* sysbase = (void*) (BASE_VA & 0xffffffff00000000);
+    mmap(sysbase, PAGE_SIZE, PROT_READ, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    *((void**)sysbase) = (void*) &syscall_entry;
     setup((uint64_t) sysbase);
     trampoline((void*) entry, sp, fini);
 
