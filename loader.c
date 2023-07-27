@@ -12,8 +12,6 @@
 #define BOX_ROUND(x) (((x) + (BOX_ALIGN)) & ~(BOX_ALIGN))
 #define BOX_TRUNC(x) ((x) & ~(BOX_ALIGN))
 
-#define BASE_VA (BOX_SIZE * 2)
-
 #define PAGE_SIZE 4096 * 4
 #define ALIGN (PAGE_SIZE - 1)
 #define ROUND_PG(x) (((x) + (ALIGN)) & ~(ALIGN))
@@ -22,6 +20,8 @@
     ((((x) &PF_R) ? PROT_READ : 0) | (((x) &PF_W) ? PROT_WRITE : 0) | \
      (((x) &PF_X) ? PROT_EXEC : 0))
 #define LOAD_ERR ((unsigned long) -1)
+
+#define BASE_VA (BOX_SIZE * 2 + PAGE_SIZE)
 
 #define STACK_SIZE (1 << 21)
 
@@ -104,7 +104,7 @@ err:
 }
 
 void trampoline(void*, void*, void*);
-void setup(uint64_t, void*);
+void setup(uint64_t);
 void syscall_entry();
 
 struct regs {
@@ -310,7 +310,9 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
         .buddy = buddy_init(heap_meta, (void*) heap, heap_size),
     };
 
-    setup(BASE_VA & 0xffffffff00000000, (void*) &syscall_entry);
+    void** sysbase = (void**) (BASE_VA & 0xffffffff00000000);
+    *sysbase = (void*) &syscall_entry;
+    setup((uint64_t) sysbase);
     trampoline((void*) entry, sp, fini);
 
     return 0;

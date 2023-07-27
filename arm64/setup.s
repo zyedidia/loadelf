@@ -1,4 +1,4 @@
-// void setup(uint64_t segment_id, void* syscall_entry)
+// void setup(uint64_t segment_id)
 .text
 .align 4
 .globl setup
@@ -8,5 +8,4 @@ setup:
 	mov x14, #0
 	mov x24, #0
 	mov x21, x0
-	mov x22, x1
 	ret
