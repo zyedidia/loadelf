@@ -225,6 +225,9 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 
     char* args[host_argc - 1];
 
+    // base is now the base of the box (pointing at the syscall table)
+    base -= PAGE_SIZE;
+
     int flags = MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE;
     void* sp_base = mmap((void*) (base + BOX_SIZE - STACK_SIZE), STACK_SIZE, PROT_READ | PROT_WRITE, flags, -1, 0);
     if (sp_base == (void*) -1) {
@@ -283,7 +286,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
         }
         *av = *host_av;
         switch (av->a_type) {
-            AVSET(AT_PHDR, av, base + ehdrs.e_phoff);
+            AVSET(AT_PHDR, av, base + PAGE_SIZE + ehdrs.e_phoff);
             AVSET(AT_PHNUM, av, ehdrs.e_phnum);
             AVSET(AT_PHENT, av, ehdrs.e_phentsize);
             AVSET(AT_ENTRY, av, entry);
@@ -297,7 +300,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
 #undef AVSET
     ++av;
 
-    uintptr_t next_mmap = (BASE_VA + (1UL * 1024 * 1024 * 1024));
+    uintptr_t next_mmap = ((BASE_VA - PAGE_SIZE) + (1UL * 1024 * 1024 * 1024));
     size_t heap_size = (2UL * 1024 * 1024 * 1024);
     void* heap_meta = malloc(buddy_sizeof(heap_size));
     assert(heap_meta);
