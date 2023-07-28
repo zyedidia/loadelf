@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include "ht.h"
+
 #define BOX_SIZE (1ULL << 32)
 #define BOX_ALIGN (BOX_SIZE - 1)
 #define BOX_ROUND(x) (((x) + (BOX_ALIGN)) & ~(BOX_ALIGN))
@@ -106,6 +108,7 @@ err:
 void trampoline(void*, void*, void*);
 void setup(uint64_t);
 void syscall_entry();
+void instcall_entry();
 
 struct regs {
     uint64_t x0;
@@ -138,16 +141,21 @@ struct proc_state {
     uintptr_t brk;
     uintptr_t next_mmap;
     struct buddy* buddy;
+    ht_t ht;
 };
 
 struct proc_state pstate;
+
+void instcall_handler(struct regs* regs) {
+    uint64_t count = ht_get(&pstate.ht, regs->x30, NULL);
+    ht_put(&pstate.ht, regs->x30, count + 1);
+}
 
 int syscall_handler(struct regs* regs) {
     switch (regs->x8) {
     case 215: // munmap
         memset((void*) regs->x0, 0, regs->x1);
         buddy_free(pstate.buddy, (void*) regs->x0);
-        /* printf("munmap %lx\n", regs->x0); */
         regs->x0 = 0;
         return 1;
     case 216: // mremap
@@ -157,7 +165,6 @@ int syscall_handler(struct regs* regs) {
         if (regs->x0 == 0) {
             size_t size = ROUND_PG(regs->x1);
             void* p = buddy_malloc(pstate.buddy, size);
-            /* printf("mmap %p %ld\n", p, regs->x1); */
             assert(p);
             regs->x0 = (uint64_t) p;
             return 1;
@@ -165,15 +172,21 @@ int syscall_handler(struct regs* regs) {
             return 0;
         }
     case 214: // brk
-        /* printf("called brk: %lx\n", regs->x0); */
         if (regs->x0 != 0) {
             assert(mmap((void*) pstate.brk, regs->x0 - pstate.brk, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0) != (void*) -1);
             pstate.brk = regs->x0;
         }
         regs->x0 = pstate.brk;
-        /* printf("return: %lx\n", regs->x0); */
-        /* pstate.next_mmap = ROUND_PG(pstate.brk); */
         return 1;
+    case 94: // exit_group
+    case 93: // exit
+        for (size_t i = 0; i < pstate.ht.cap; i++) {
+            if (pstate.ht.entries[i].filled) {
+                ht_entry_t* ent = &pstate.ht.entries[i];
+                fprintf(stderr, "%lx %ld\n", ent->key, ent->val);
+            }
+        }
+        return 0;
     }
     return 0;
 }
@@ -312,10 +325,12 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
         .next_mmap = next_mmap,
         .buddy = buddy_init(heap_meta, (void*) heap, heap_size),
     };
+    ht_alloc(&pstate.ht, 1024 * 1024);
 
     void* sysbase = (void*) (BASE_VA & 0xffffffff00000000);
     mmap(sysbase, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     *((void**)sysbase) = (void*) &syscall_entry;
+    *((void**)sysbase+1) = (void*) &instcall_entry;
     mprotect(sysbase, PAGE_SIZE, PROT_READ);
     setup((uint64_t) sysbase);
     trampoline((void*) entry, sp, fini);

@@ -30,6 +30,20 @@ ldp x30, x24, [sp, #0+16*11]
 
 .text
 .align 4
+.globl instcall_entry
+.type instcall_entry,@function
+instcall_entry:
+    // TODO: optimize by only saving/restoring for hooked syscalls (mmap, brk)
+    sub sp, sp, #192
+    PROLOGUE
+    mov x0, sp
+    bl instcall_handler
+    EPILOGUE
+    add sp, sp, #192
+    ret
+
+.text
+.align 4
 .globl syscall_entry
 .type syscall_entry,@function
 syscall_entry:

@@ -3,7 +3,7 @@ local arch = cli.arch or "arm64"
 local cflags = "-ffixed-x15 -ffixed-x21 -ffixed-x22 -ffixed-x14 -ffixed-x24 -ffixed-x23"
 
 return b{
-    $ loader: loader.o $arch/trampoline.o $arch/setup.o $arch/syscall.o
+    $ loader: loader.o ht.o $arch/trampoline.o $arch/setup.o $arch/syscall.o
         $cc $input -o $output -static -g3
     $ %.o: %.c
         $cc $cflags $input -c -o $output -O2 -g3
