@@ -11,9 +11,15 @@ stp x16, x17, [sp, #0+16*8]
 stp x18, x29, [sp, #0+16*9]
 stp x21, x22, [sp, #0+16*10]
 stp x30, x24, [sp, #0+16*11]
+mrs x0, nzcv
+mrs x1, fpsr
+stp x0, x1, [sp, #0+16*28]
 .endm
 
 .macro EPILOGUE
+ldp x0, x1,   [sp, #0+16*28]
+msr nzcv, x0
+msr fpsr, x1
 ldp x0, x1,   [sp, #0+16*0]
 ldp x2, x3,   [sp, #0+16*1]
 ldp x4, x5,   [sp, #0+16*2]
@@ -33,13 +39,12 @@ ldp x30, x24, [sp, #0+16*11]
 .globl instcall_entry
 .type instcall_entry,@function
 instcall_entry:
-    // TODO: optimize by only saving/restoring for hooked syscalls (mmap, brk)
-    sub sp, sp, #192
+    sub sp, sp, #464
     PROLOGUE
     mov x0, sp
     bl instcall_handler
     EPILOGUE
-    add sp, sp, #192
+    add sp, sp, #464
     ret
 
 .text
@@ -48,16 +53,16 @@ instcall_entry:
 .type syscall_entry,@function
 syscall_entry:
 	// TODO: optimize by only saving/restoring for hooked syscalls (mmap, brk)
-	sub sp, sp, #192
+	sub sp, sp, #464
 	PROLOGUE
     mov x0, sp
 	bl syscall_handler
     cbnz x0, handled
 	EPILOGUE
-	add sp, sp, #192
+	add sp, sp, #464
     svc #0
     ret
 handled:
     EPILOGUE
-    add sp, sp, #192
+    add sp, sp, #464
     ret

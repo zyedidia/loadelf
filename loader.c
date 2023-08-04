@@ -105,8 +105,7 @@ err:
     return LOAD_ERR;
 }
 
-void trampoline(void*, void*, void*);
-void setup(uint64_t);
+void trampoline(void*, void*, void*, uint64_t);
 void syscall_entry();
 void instcall_entry();
 
@@ -135,6 +134,7 @@ struct regs {
     uint64_t x22;
     uint64_t x30;
     uint64_t x24;
+    uint64_t vector[32];
 };
 
 struct proc_state {
@@ -147,6 +147,7 @@ struct proc_state {
 struct proc_state pstate;
 
 void instcall_handler(struct regs* regs) {
+    /* printf("%p\n", regs->x30); */
     uint64_t count = ht_get(&pstate.ht, regs->x30, NULL);
     ht_put(&pstate.ht, regs->x30, count + 1);
 }
@@ -332,8 +333,7 @@ int main(int host_argc, char* host_argv[], char* host_envp[]) {
     *((void**)sysbase) = (void*) &syscall_entry;
     *((void**)sysbase+1) = (void*) &instcall_entry;
     mprotect(sysbase, PAGE_SIZE, PROT_READ);
-    setup((uint64_t) sysbase);
-    trampoline((void*) entry, sp, fini);
+    trampoline((void*) entry, sp, fini, (uint64_t) sysbase);
 
     return 0;
 }

@@ -128,11 +128,6 @@ void *buddy_walk(struct buddy *buddy, void *(fp)(void *ctx, void *addr, size_t s
  * Miscellaneous functions
  */
 
-/*
- * Calculates the fragmentation in the allocator in a 0.0 - 1.0 range.
- * NOTE: if you are using a non-power-of-two sized arena the maximum upper bound can be lower.
- */
-float buddy_fragmentation(struct buddy *buddy);
 
 #ifdef __cplusplus
 }
@@ -311,10 +306,6 @@ static void buddy_tree_debug(struct buddy_tree *t, struct buddy_tree_pos pos, si
 /* Implementation defined */
 static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct buddy_tree_pos pos);
 
-#ifndef BUDDY_FRAG_OPTIONAL
-/* Report fragmentation in a 0.0 - 1.0 range */
-static float buddy_tree_fragmentation(struct buddy_tree *t);
-#endif
 
 /*
  * A char-backed bitset implementation
@@ -361,9 +352,6 @@ static inline size_t ceiling_power_of_two(size_t value);
 /*
  * Math
  */
-
-/* Approximates the square root of a float */
-static inline float approximate_square_root(float f);
 
 /*
  Implementation
@@ -911,15 +899,6 @@ void *buddy_walk(struct buddy *buddy,
     } while (buddy_tree_walk(tree, &state));
     return NULL;
 }
-
-#ifndef BUDDY_FRAG_OPTIONAL
-float buddy_fragmentation(struct buddy *buddy) {
-    if (buddy == NULL) {
-        return 0;
-    }
-    return buddy_tree_fragmentation(buddy_tree(buddy));
-}
-#endif
 
 static size_t depth_for_size(struct buddy *buddy, size_t requested_size) {
     size_t depth, effective_memory_size;
@@ -1721,52 +1700,6 @@ static unsigned int buddy_tree_check_invariant(struct buddy_tree *t, struct budd
     return fail;
 }
 
-#ifndef BUDDY_FRAG_OPTIONAL
-/*
- * Calculate tree fragmentation based on free slots.
- * Based on https://asawicki.info/news_1757_a_metric_for_memory_fragmentation
- */
-static float buddy_tree_fragmentation(struct buddy_tree *t) {
-    uint8_t tree_order;
-    size_t root_status, quality, total_free_size, virtual_size;
-    struct buddy_tree_walk_state state;
-    float quality_percent, fragmentation;
-
-    tree_order = buddy_tree_order(t);
-    root_status = buddy_tree_status(t, buddy_tree_root());
-    if (root_status == 0) { /* Emptry tree */
-        return 0;
-    }
-
-    quality = 0;
-    total_free_size = 0;
-
-    state = buddy_tree_walk_state_root();
-    do {
-        size_t pos_status = buddy_tree_status(t, state.current_pos);
-        if (pos_status == 0) {
-            /* Empty node, process */
-            virtual_size = 1ul << ((tree_order - state.current_pos.depth) % ((sizeof(size_t) * CHAR_BIT)-1));
-            quality += (virtual_size * virtual_size);
-            total_free_size += virtual_size;
-            /* Ascend */
-            state.going_up = 1;
-        } else if (pos_status == (tree_order - state.current_pos.depth + 1)) {
-            /* Busy node, ascend */
-            state.going_up = 1;
-        }
-    } while (buddy_tree_walk(t, &state));
-
-    if (total_free_size == 0) { /* Fully-allocated tree */
-        return 0;
-    }
-
-    quality_percent = approximate_square_root((float) quality) / (float) total_free_size;
-    fragmentation = 1 - (quality_percent * quality_percent);
-    return fragmentation;
-}
-#endif
-
 /*
  * A char-backed bitset implementation
  */
@@ -1944,14 +1877,6 @@ static inline size_t ceiling_power_of_two(size_t value) {
     return ((size_t)1u) << (highest_bit_position(value + value - 1)-1);
 }
 
-static inline float approximate_square_root(float f) {
-    /* As listed in https://en.wikipedia.org/wiki/Methods_of_computing_square_roots */
-    union { float f; uint32_t i; } val = {f};
-    val.i -= 1 << 23;   /* Subtract 2^m. */
-    val.i >>= 1;        /* Divide by 2. */
-    val.i += 1 << 29;   /* Add ((b + 1) / 2) * 2^m. */
-    return val.f;       /* Interpret again as float */
-}
 
 #ifdef __cplusplus
 }
