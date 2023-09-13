@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <assert.h>
 
+#include <sys/uio.h>
+
 #include "ht.h"
 
 #define BOX_SIZE (1ULL << 32)
@@ -153,6 +155,8 @@ void instcall_handler(struct regs* regs) {
 }
 
 int syscall_handler(struct regs* regs) {
+    printf("syscall %d\n", regs->x8);
+    void* sysbase = (void*) (BASE_VA & 0xffffffff00000000);
     switch (regs->x8) {
     case 215: // munmap
         memset((void*) regs->x0, 0, regs->x1);
@@ -166,6 +170,7 @@ int syscall_handler(struct regs* regs) {
         if (regs->x0 == 0) {
             size_t size = ROUND_PG(regs->x1);
             void* p = buddy_malloc(pstate.buddy, size);
+            printf("%ld\n", size);
             assert(p);
             regs->x0 = (uint64_t) p;
             return 1;
@@ -178,6 +183,18 @@ int syscall_handler(struct regs* regs) {
             pstate.brk = regs->x0;
         }
         regs->x0 = pstate.brk;
+        return 1;
+    case 64: // write
+        regs->x1 = (uint32_t) regs->x1;
+        regs->x0 = write(regs->x0, sysbase + regs->x1, regs->x2);
+        return 1;
+    case 66: // write
+        regs->x1 = (uint32_t) regs->x1;
+        struct iovec* iov = (struct iovec*) (sysbase + regs->x1);
+        for (size_t i = 0; i < regs->x2; i++) {
+            iov[i].iov_base = sysbase + (uint32_t) iov[i].iov_base;
+        }
+        regs->x0 = writev(regs->x0, sysbase + regs->x1, regs->x2);
         return 1;
     case 94: // exit_group
     case 93: // exit
